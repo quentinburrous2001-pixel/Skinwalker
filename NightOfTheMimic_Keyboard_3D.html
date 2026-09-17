@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Night of the Mimic 3D</title>
+<style>
+html,body{margin:0;background:#070a0f;color:#eee;font-family:system-ui,-apple-system,sans-serif;height:100%;overflow:hidden}
+#game{position:relative;width:100vw;height:100vh;background:radial-gradient(circle at 50% 45%,#202a25 0,#101713 42%,#05070a 100%)}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.panel{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;justify-content:space-between;pointer-events:none}
+.card{background:#111923dd;border:1px solid #394553;border-radius:12px;padding:8px 10px;backdrop-filter:blur(5px);font-size:13px}
+.bar{width:90px;height:7px;background:#28313a;border-radius:9px;overflow:hidden;margin-top:4px}.fill{height:100%;width:50%;background:#d9b85d}
+#msg{position:absolute;left:50%;top:18%;transform:translateX(-50%);background:#101722e8;border:1px solid #65717d;padding:10px 14px;border-radius:12px;text-align:center;max-width:80%;opacity:0;transition:.2s}
+#controls{position:absolute;bottom:18px;left:18px;right:18px;display:flex;justify-content:space-between;align-items:end}
+#stick{width:118px;height:118px;border-radius:50%;background:#18212add;border:1px solid #56616c;position:relative;touch-action:none}
+#knob{width:48px;height:48px;border-radius:50%;background:#8d9a9f;position:absolute;left:35px;top:35px}
+.actions{display:grid;grid-template-columns:repeat(2,76px);gap:9px}
+button{height:58px;position:relative;z-index:20;cursor:pointer;touch-action:manipulation;border-radius:15px;border:1px solid #697580;background:#18212c;color:#fff;font-weight:700;font-size:12px;box-shadow:0 3px 12px #0008}
+button:active{transform:scale(.95);background:#2b3744}
+#start,#end{position:absolute;pointer-events:auto;inset:0;background:#05070bea;display:flex;align-items:center;justify-content:center;text-align:center;z-index:5}
+.modal{max-width:480px;padding:28px;pointer-events:auto}.modal h1{font-size:38px;margin:0 0 8px}.modal p{color:#b8c0c7;line-height:1.45}.primary{width:180px;background:#35475a}
+.hidden{display:none!important}
+small{color:#9ea9b2}
+</style>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+const oldCanvas=document.querySelector('canvas');
+let mouseLocked=false,camYaw=0,camPitch=0;
+renderer.domElement.addEventListener('click',()=>renderer.domElement.requestPointerLock?.());
+document.addEventListener('pointerlockchange',()=>mouseLocked=document.pointerLockElement===renderer.domElement);
+document.addEventListener('mousemove',e=>{if(!mouseLocked)return;camYaw-=e.movementX*.0025;camPitch=Math.max(-.8,Math.min(.8,camPitch-e.movementY*.002));});
+
+let scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,200);
+let renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=true;
+document.body.insertBefore(renderer.domElement,document.body.firstChild);
+renderer.domElement.style.position='absolute';renderer.domElement.style.inset='0';renderer.domElement.style.zIndex='0';renderer.domElement.tabIndex=0;renderer.domElement.style.cursor='crosshair';renderer.domElement.focus();
+oldCanvas.style.display='none';
+scene.background=new THREE.Color(0x050912);scene.fog=new THREE.Fog(0x050912,25,110);
+scene.add(new THREE.HemisphereLight(0x9bb0d0,0x11150e,1.25));
+let moon=new THREE.DirectionalLight(0xb9c9ff,2.2);moon.position.set(-30,40,20);moon.castShadow=true;scene.add(moon);
+const M=c=>new THREE.MeshStandardMaterial({color:c,roughness:.85});
+function B(w,h,d,c){let m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c));m.castShadow=true;m.receiveShadow=true;return m}
+let ground=B(120,.2,120,0x182119);ground.position.y=-.1;scene.add(ground);
+for(let i=-50;i<=50;i+=10){let a=B(2,.03,120,0x252a29);a.position.x=i;scene.add(a);let b=B(120,.04,2,0x252a29);b.position.z=i;scene.add(b)}
+for(let i=0;i<45;i++){let x=(Math.random()-.5)*95,z=(Math.random()-.5)*95;if(Math.abs(x%10)<2||Math.abs(z%10)<2)continue;let h=2+Math.random()*3;let b=B(4+Math.random()*2,h,4+Math.random()*2,0x29363a);b.position.set(x,h/2,z);scene.add(b);let roof=B(6,.35,6,0x141b20);roof.position.set(x,h+.15,z);roof.rotation.y=.78;scene.add(roof)}
+for(let i=0;i<35;i++){let x=(Math.random()-.5)*105,z=(Math.random()-.5)*105;t=B(.35,1.8,.35,0x4a382c);t.position.set(x,.9,z);scene.add(t);let c=new THREE.Mesh(new THREE.ConeGeometry(1.5,3.5,7),M(0x183321));c.position.set(x,3,z);scene.add(c)}
+let player3=new THREE.Group(),pb=B(.7,1.6,.5,0x354650);pb.position.y=.9;player3.add(pb);let ph=new THREE.Mesh(new THREE.SphereGeometry(.35,18,12),M(0xd2ad88));ph.position.y=1.95;player3.add(ph);player3.position.set(0,0,0);scene.add(player3);
+let people3=[];let nn=['Mara','Eli','Jonah','Nora','Cal','June','Theo','Iris','Ben','Ruth','Sam','Mae'];
+for(let i=0;i<12;i++){let g=new THREE.Group(),b=B(.55,1.4,.42,0x60717b);b.position.y=.8;g.add(b);let h=new THREE.Mesh(new THREE.SphereGeometry(.3,14,10),M(0xc2a17d));h.position.y=1.7;g.add(h);g.position.set((Math.random()-.5)*80,0,(Math.random()-.5)*80);g.userData.alive=true;g.userData.name=nn[i];scene.add(g);people3.push(g)}
+camera.position.set(0,4,7);let yaw=0;
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+function render3(){requestAnimationFrame(render3);if(window.started){let s=window.keys||{};let sp=s.Shift?8:5,dx=(s.d||s.ArrowRight?1:0)-(s.a||s.ArrowLeft?1:0),dz=(s.s||s.ArrowDown?1:0)-(s.w||s.ArrowUp?1:0),l=Math.hypot(dx,dz)||1;player3.position.x+=dx/l*sp/60;player3.position.z+=dz/l*sp/60;let fx=Math.sin(camYaw),fz=Math.cos(camYaw);
+player3.position.x+=((dx/l*sp/60)*Math.cos(camYaw)+(dz/l*sp/60)*Math.sin(camYaw));
+player3.position.z+=((-dx/l*sp/60)*Math.sin(camYaw)+(dz/l*sp/60)*Math.cos(camYaw));
+camera.position.set(player3.position.x-Math.sin(camYaw)*7,4,player3.position.z-Math.cos(camYaw)*7);
+camera.lookAt(player3.position.x+Math.sin(camYaw)*4,2+camPitch*3,player3.position.z+Math.cos(camYaw)*4);people3.forEach(p=>{if(p.userData.alive){let d=p.position.distanceTo(player3.position);if(d<7){p.position.x+=(p.position.x-player3.position.x)/Math.max(d,.1)*.03;p.position.z+=(p.position.z-player3.position.z)/Math.max(d,.1)*.03}}})}renderer.render(scene,camera)}render3();
+</script>
+<div id="game">
+<canvas id="c"></canvas>
+<div class="panel">
+ <div class="card">🌙 Night <b id="time">00:00</b><br><small>Goal: feed before dawn</small></div>
+ <div class="card">Suspicion <b id="sus">0%</b><div class="bar"><div id="susbar" class="fill"></div></div></div>
+ <div class="card">Hunger <b id="hun">100%</b><div class="bar"><div id="hunbar" class="fill"></div></div></div>
+</div>
+<div id="msg"></div>
+<div id="controls">
+ <div id="stick"><div id="knob"></div></div>
+ <div class="actions">
+  <button id="shift">SHAPESHIFT</button>
+  <button id="mimic">MIMIC</button>
+  <button id="hunt">HUNT</button>
+  <button id="howl">HOWL</button>
+ </div>
+</div>
+<div id="start"><div class="modal">
+ <h1>Night of the Mimic</h1>
+ <p>You are the creature stalking a remote town. Move through the darkness, learn who is alone, and use shapeshifting to get close without raising suspicion.</p>
+ <p><b>Objective:</b> feed on 5 townspeople before dawn.</p>
+ <button class="primary" id="play">PLAY</button>
+</div></div>
+<div id="end" class="hidden"><div class="modal">
+ <h1 id="endTitle"></h1><p id="endText"></p><button class="primary" id="again">PLAY AGAIN</button>
+</div></div>
+</div>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+let W,H,dpr,started=false,last=0,night=0,kills=0, hunger=100,susp=0,form='creature',mimicName='';
+let px=0,py=0, vx=0,vy=0, joy={x:0,y:0}, keys={};
+const names=['Mara','Eli','Jonah','Nora','Cal','June','Theo','Iris','Ben','Ruth','Sam','Mae'];
+let people=[], particles=[];
+function resize(){dpr=devicePixelRatio||1;W=innerWidth;H=innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0); if(!started){px=W/2;py=H/2}}
+addEventListener('resize',resize);resize();
+function rnd(a,b){return a+Math.random()*(b-a)}
+function spawn(){
+ people=[]; for(let i=0;i<12;i++) people.push({name:names[i],x:rnd(60,W-60),y:rnd(100,H-180),alive:true,kind:i%3,dir:rnd(0,6.28),fear:0});
+}
+function say(t){const m=document.getElementById('msg');m.textContent=t;m.style.opacity=1;clearTimeout(say.t);say.t=setTimeout(()=>m.style.opacity=0,1800)}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function update(dt){
+ if(!started)return;
+ night+=dt; hunger=Math.max(0,hunger-dt*0.65);
+ const speed=form==='creature'?150:125;
+ vx=joy.x*speed;vy=joy.y*speed;
+ if(keys.w||keys.ArrowUp)vy=-speed;if(keys.s||keys.ArrowDown)vy=speed;if(keys.a||keys.ArrowLeft)vx=-speed;if(keys.d||keys.ArrowRight)vx=speed;
+ px=Math.max(25,Math.min(W-25,px+vx*dt));py=Math.max(75,Math.min(H-145,py+vy*dt));
+ people.forEach(p=>{if(!p.alive)return;p.dir+=rnd(-.6,.6)*dt;p.x+=Math.cos(p.dir)*12*dt;p.y+=Math.sin(p.dir)*12*dt;p.x=Math.max(35,Math.min(W-35,p.x));p.y=Math.max(95,Math.min(H-175,p.y));if(dist({x:px,y:py},p)<90)p.fear=Math.min(1,p.fear+dt*.25);else p.fear=Math.max(0,p.fear-dt*.08)});
+ if(form==='creature')susp=Math.max(0,susp-dt*2); else susp=Math.max(0,susp-dt*.6);
+ if(night>=180){finish(false,'Dawn has arrived. The town survived the night.')}
+ if(hunger<=0)finish(false,'Hunger consumed the creature before dawn.');
+ document.getElementById('time').textContent=new Date(night*1000).toISOString().substr(14,5);
+ document.getElementById('sus').textContent=Math.round(susp)+'%';document.getElementById('hun').textContent=Math.round(hunger)+'%';
+ document.getElementById('susbar').style.width=susp+'%';document.getElementById('hunbar').style.width=hunger+'%';
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ // town
+ ctx.fillStyle='#111914';ctx.fillRect(0,0,W,H);
+ ctx.strokeStyle='#1f2a25';ctx.lineWidth=34;
+ for(let x=40;x<W;x+=170){ctx.beginPath();ctx.moveTo(x,70);ctx.lineTo(x,H-120);ctx.stroke()}
+ for(let y=130;y<H-130;y+=145){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ // moon
+ ctx.fillStyle='#d9d7b9';ctx.beginPath();ctx.arc(W-55,65,22,0,7);ctx.fill();
+ // houses
+ for(let x=20;x<W;x+=170)for(let y=105;y<H-180;y+=145){ctx.fillStyle='#202a28';ctx.fillRect(x,y,70,48);ctx.fillStyle='#29352f';ctx.beginPath();ctx.moveTo(x-6,y);ctx.lineTo(x+35,y-24);ctx.lineTo(x+76,y);ctx.fill();ctx.fillStyle='#b58b48';ctx.fillRect(x+28,y+22,12,26)}
+ people.forEach(p=>{if(!p.alive)return;ctx.save();ctx.translate(p.x,p.y);ctx.fillStyle=p.fear>.3?'#c9b36b':'#71808a';ctx.beginPath();ctx.arc(0,-10,9,0,7);ctx.fill();ctx.fillRect(-7,0,14,22);ctx.fillStyle='#d9d9d9';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(p.name,0,38);ctx.restore()});
+ // player
+ ctx.save();ctx.translate(px,py);
+ ctx.fillStyle=form==='creature'?'#d4d4d4':'#8aa0ad';ctx.beginPath();ctx.arc(0,-13,11,0,7);ctx.fill();
+ ctx.fillStyle=form==='creature'?'#3d5360':'#687d88';ctx.beginPath();ctx.moveTo(-12,0);ctx.lineTo(12,0);ctx.lineTo(8,30);ctx.lineTo(-8,30);ctx.closePath();ctx.fill();
+ if(form==='creature'){ctx.fillStyle='#a43b3b';ctx.beginPath();ctx.arc(-4,-15,2,0,7);ctx.arc(4,-15,2,0,7);ctx.fill()}
+ ctx.restore();
+ // particles
+ particles.forEach(a=>{ctx.globalAlpha=a.life;ctx.fillStyle='#c7a866';ctx.fillRect(a.x,a.y,3,3);});ctx.globalAlpha=1;
+}
+function loop(t){let dt=Math.min(.05,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+function nearest(max=70){let best=null,bd=max;for(const p of people){if(!p.alive)continue;let d=dist({x:px,y:py},p);if(d<bd){best=p;bd=d}}return best}
+document.getElementById('shift').onclick=()=>{form=form==='creature'?'human':'creature';say(form==='human'?'You take a human form.':'Your disguise melts away.');};
+document.getElementById('mimic').onclick=()=>{let p=nearest(120);if(!p){say('Nobody is close enough to imitate.');return}form='human';mimicName=p.name;susp=Math.min(100,susp+3);say('You now resemble '+p.name+'.');};
+document.getElementById('hunt').onclick=()=>{let p=nearest(58);if(!p){say('Get closer to someone.');return}if(form==='creature'){p.alive=false;kills++;hunger=Math.min(100,hunger+24);susp=Math.min(100,susp+14);for(let i=0;i<16;i++)particles.push({x:p.x,y:p.y,life:1});say('The hunt succeeds. '+kills+'/5 fed.');if(kills>=5)finish(true,'Five townspeople have vanished into the night.');}else{say('You need to reveal your true form to hunt.');susp=Math.min(100,susp+8)}};
+document.getElementById('howl').onclick=()=>{say('A distant howl rolls across the town.');people.forEach(p=>{if(dist({x:px,y:py},p)<230)p.fear=Math.min(1,p.fear+.5)});susp=Math.min(100,susp+7)};
+function finish(win,text){started=false;window.started=false;document.getElementById('end').classList.remove('hidden');document.getElementById('endTitle').textContent=win?'NIGHT COMPLETE':'GAME OVER';document.getElementById('endText').textContent=text}
+function startGame(){
+  const start=document.getElementById('start');
+  const end=document.getElementById('end');
+  if(start) start.classList.add('hidden');
+  if(end) end.classList.add('hidden');
+  reset();
+  started=true;
+  last=performance.now();
+  say('The hunt begins...');
+}
+function restartGame(){
+  const end=document.getElementById('end');
+  if(end) end.classList.add('hidden');
+  reset();
+  started=true;
+  last=performance.now();
+  say('The hunt begins...');
+}
+const playBtn=document.getElementById('play');
+const againBtn=document.getElementById('again');
+['click','touchend'].forEach(ev=>{
+  playBtn.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();startGame();},{passive:false});
+  againBtn.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();restartGame();},{passive:false});
+});
+function reset(){night=0;kills=0;hunger=100;susp=0;form='creature';mimicName='';px=W/2;py=H/2;spawn()}
+addEventListener('keydown',e=>keys[e.key]=true);addEventListener('keyup',e=>keys[e.key]=false);
+const stick=document.getElementById('stick'),knob=document.getElementById('knob');let drag=false;
+function joyMove(e){if(!drag)return;let r=stick.getBoundingClientRect(),x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2),m=Math.hypot(x,y);if(m>1){x/=m;y/=m}joy={x,y};knob.style.transform=`translate(${x*32}px,${y*32}px)`}
+stick.addEventListener('pointerdown',e=>{drag=true;stick.setPointerCapture(e.pointerId);joyMove(e)});stick.addEventListener('pointermove',joyMove);stick.addEventListener('pointerup',()=>{drag=false;joy={x:0,y:0};knob.style.transform='translate(0,0)'});
+</script>
+
+<style>
+.keyboardHelp{position:fixed;left:14px;bottom:14px;background:#080e17cc;border:1px solid #566270;border-radius:10px;padding:8px 11px;font:12px system-ui;color:#d8dee3;pointer-events:none}
+.crosshair{position:fixed;left:50%;top:50%;width:5px;height:5px;margin:-2px;background:#fff;border-radius:50%;box-shadow:0 0 5px #000;pointer-events:none}
+</style>
+<div class="keyboardHelp">WASD Move · Mouse Look · SHIFT Sprint · Q Shapeshift · E Mimic · SPACE Hunt · F Howl · ESC Pause</div>
+<div class="crosshair"></div>
+</body></html>
